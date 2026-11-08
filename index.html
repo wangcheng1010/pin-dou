@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<link rel="icon" href="data:,">
+<title>拼豆图纸生成器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#faf7f2; --card:#ffffff; --ink:#1e2321; --muted:#6b7370; --line:#e7e0d6;
+  --accent:#e4572e; --accent2:#0f766e; --accent-soft:#fdeee8; --teal-soft:#e6f4f2;
+  --chip:#f3efe8; --shadow:0 10px 30px rgba(30,35,33,.08); --radius:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#171a19; --card:#222625; --ink:#f0ede8; --muted:#a7aeab; --line:#343a38; --accent:#f0714a; --accent2:#2dd4bf; --accent-soft:#3a2721; --teal-soft:#173a36; --chip:#2b302e; --shadow:0 10px 30px rgba(0,0,0,.35); }
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans SC",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 56px}
+h1{font-size:32px;line-height:1.2;margin:6px 0 8px;font-weight:900;letter-spacing:-.02em}
+@media(max-width:640px){h1{font-size:26px}}
+.lede{color:var(--muted);max-width:720px;margin:0 0 6px;font-size:15px}
+.lede strong{color:var(--ink)}
+.steps{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px}
+.step{font-size:13px;font-weight:700;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.step b{color:var(--accent)}
+.layout{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+.layout>*{min-width:0}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+@media(max-width:640px){.row2{grid-template-columns:1fr}.card{padding:14px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;min-width:0;max-width:100%}
+.card h2{font-size:16px;margin:0 0 12px}
+.card h2 span{color:var(--accent);margin-right:6px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:22px 14px;text-align:center;cursor:pointer;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop p{margin:6px 0 2px;font-weight:700}
+.drop small{color:var(--muted)}
+.thumb{width:100%;max-height:150px;object-fit:contain;border-radius:8px;background:var(--chip);display:none}
+label.flabel{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}
+label.flabel output{color:var(--accent);font-weight:900}
+select,input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:14px;font-family:inherit}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.meta{font-size:13px;color:var(--muted);background:var(--chip);border-radius:10px;padding:10px 12px;margin-top:12px}
+.meta b{color:var(--ink)}
+.btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;min-height:44px}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;width:100%}
+.btn.teal{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.btn.small{padding:7px 10px;min-height:36px;font-size:13px}
+.btn.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.divider{border:none;border-top:1px solid var(--line);margin:18px 0}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:480px){.tools{grid-template-columns:repeat(2,1fr)}}
+.tool{text-align:center}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;margin:8px 0;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+.canvas-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.canvas-head h2{margin:0}
+.zoomctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.canvas-scroll{overflow:auto;border:1px solid var(--line);border-radius:12px;background:repeating-conic-gradient(var(--chip) 0% 25%, var(--card) 0% 50%) 0 0/20px 20px;max-height:70vh;max-width:100%;-webkit-overflow-scrolling:touch}
+canvas#board{display:block;margin:auto;touch-action:manipulation;cursor:crosshair}
+.drop p,.drop small{overflow-wrap:anywhere}
+select,input[type=text],input[type=range]{max-width:100%}
+.hint{font-size:13px;color:var(--muted);margin:10px 0 0}
+.hint.warn{background:var(--accent-soft);color:var(--ink);border-radius:8px;padding:8px 10px;display:none}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+@media(max-width:640px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--chip);border-radius:12px;padding:12px}
+.stat .n{font-size:24px;font-weight:900;line-height:1.1}
+.stat .t{font-size:12px;color:var(--muted)}
+.pal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;max-height:220px;overflow:auto;padding:2px}
+.pal-cell{border:2px solid transparent;border-radius:9px;padding:3px;cursor:pointer;text-align:center;background:var(--chip)}
+.pal-cell .sw{height:26px;border-radius:6px;border:1px solid rgba(0,0,0,.15)}
+.pal-cell .cd{font-size:10px;font-weight:700;line-height:1.3}
+.pal-cell.sel{border-color:var(--accent)}
+.color-list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto}
+.color-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.color-row .sw{width:34px;height:34px;border-radius:8px;border:1px solid rgba(0,0,0,.15);flex:none}
+.color-row .info{flex:1;min-width:0}
+.color-row .info b{font-size:14px}
+.color-row .info small{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:5px;background:var(--chip);border-radius:99px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--accent2)}
+.full{grid-column:1/-1}
+.faq{font-size:14px;color:var(--muted)}
+.faq b{color:var(--ink)}
+footer{margin-top:28px;font-size:13px;color:var(--muted);text-align:center}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:.2s;z-index:50;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>把照片变成一张能照着拼的拼豆图纸</h1>
+  <p class="lede">上传一张 JPG / PNG 照片，照片<strong>只在这台设备上处理</strong>，自动按所选品牌的色卡匹配到最接近的拼豆色号，数好每种颜色要多少颗。生成后可以逐格改色、擦除、整色替换，再导出带网格和坐标的高清图纸照着拼。</p>
+  <div class="steps"><span class="step"><b>1</b> 上传照片</span><span class="step"><b>2</b> 选格数和品牌色板</span><span class="step"><b>3</b> 精修图纸</span><span class="step"><b>4</b> 导出 PNG / CSV</span></div>
+
+  <div class="layout">
+    <!-- 左：控制区 -->
+    <div>
+      <div class="card">
+        <h2><span>1</span>照片与图纸设置</h2>
+        <div class="drop" id="drop" role="button" tabindex="0" aria-label="上传照片">
+          <img class="thumb" id="thumb" alt="已上传照片预览">
+          <p id="dropTitle">点这里选择照片，或把照片拖进来</p>
+          <small>支持 JPG / PNG · 照片不会离开这台设备</small>
+        </div>
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden>
+        <div style="margin-top:10px"><button class="btn small" id="demoBtn" type="button">没有照片？先用示例图试一遍 →</button></div>
+
+        <label class="flabel" for="gridW">横向格数 <output id="gridWOut">52</output> 格</label>
+        <input type="range" id="gridW" min="16" max="120" step="2" value="52">
+        <div class="row2">
+          <div><label class="flabel" for="gridWNum">格数（填数字）</label><input type="text" inputmode="numeric" id="gridWNum" value="52"></div>
+          <div><label class="flabel" for="brandSel">拼豆品牌色板</label>
+            <select id="brandSel">
+              <option value="mard">MARD</option><option value="coco">COCO</option>
+              <option value="manman">漫漫</option><option value="panpan">盼盼</option><option value="mixiaowo">咪小窝</option>
+            </select></div>
+        </div>
+        <label class="flabel" for="satRange">饱和度增强 <output id="satOut">1.30×</output></label>
+        <input type="range" id="satRange" min="0.8" max="2" step="0.05" value="1.3">
+        <p class="hint" style="margin-top:2px">浅蓝、浅粉这类淡彩色在原图里太淡时，先把饱和度拉高再匹配，就不容易被白色、灰色抢走。再往右拉颜色更鲜明，拉过头会偏色。</p>
+        <label class="check"><input type="checkbox" id="ditherChk"> 抖动过渡（渐变更自然，杂色会略多）</label>
+        <label class="check"><input type="checkbox" id="bgChk"> 自动去除背景（只去掉和图片边缘连着的背景色）</label>
+        <div id="bgTolBox" style="display:none">
+          <label class="flabel" for="bgTolRange" style="margin-top:6px">背景容差 <output id="bgTolOut">20</output></label>
+          <input type="range" id="bgTolRange" min="5" max="50" step="1" value="20">
+          <p class="hint" style="margin-top:2px">容差越大，去掉的背景范围越大。开启后会从图片四条边开始，把颜色接近背景、且与边缘连通的区域清成空格：空格不参与颜色匹配、不计颗数，PNG / CSV 导出里也是空的。主体内部被轮廓包住的相同颜色不会被误删。背景没去干净就把容差调大，主体边缘被吃掉就调小。</p>
+        </div>
+        <label class="check"><input type="checkbox" id="showCodeChk" checked> 在图纸上显示色号</label>
+        <div class="meta" id="sizeMeta">还没有图纸。上传照片或点示例图即可生成。</div>
+        <div style="margin-top:14px"><button class="btn primary" id="genBtn" type="button">生成 / 重新生成图纸</button></div>
+        <p class="hint">改完格数、品牌、饱和度、去背景或抖动设置后，点这个按钮重新匹配颜色；已经手动改过的格子会被覆盖。有彩色的格子已做保护，不会再被匹配成白 / 灰 / 黑。</p>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2><span>2</span>清理图纸</h2>
+        <label class="flabel" for="mergeRange">颜色合并强度 <output id="mergeOut">12</output></label>
+        <input type="range" id="mergeRange" min="4" max="40" value="12">
+        <p class="hint" style="margin-top:2px">强度越大，相近的颜色越会被并成一种，颜色种类更少、更好买豆。</p>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="btn small" id="mergeBtn" type="button">合并相近颜色</button>
+          <button class="btn small" id="denoiseBtn" type="button">去除孤立杂色</button>
+          <button class="btn small" id="undoBtn" type="button">撤销一步</button>
+        </div>
+        <hr class="divider">
+        <h2><span>3</span>导出</h2>
+        <div class="btnrow">
+          <button class="btn teal" id="pngBtn" type="button" style="flex:1">导出高清 PNG 图纸</button>
+          <button class="btn" id="csvBtn" type="button" style="flex:1">导出 CSV 数据</button>
+        </div>
+        <p class="hint">PNG 带网格、色号、每 5 格坐标刻度和完整的用色清单，打印时选实际大小即可；CSV 是逐格源数据（行、列、色号、色名、十六进制色值）加一份用量汇总，方便自己再加工或下单买豆。</p>
+      </div>
+    </div>
+
+    <!-- 右：图纸区 -->
+    <div>
+      <div class="card">
+        <div class="canvas-head">
+          <h2>图纸预览</h2>
+          <div class="zoomctl">
+            <button class="btn small" id="zoomOut" type="button" aria-label="缩小">－</button>
+            <span id="zoomLabel" style="font-size:13px;font-weight:700;min-width:44px;text-align:center">100%</span>
+            <button class="btn small" id="zoomIn" type="button" aria-label="放大">＋</button>
+            <button class="btn small" id="zoomFit" type="button">适宽</button>
+          </div>
+        </div>
+        <div class="canvas-scroll" id="scrollBox"><canvas id="board" width="320" height="200" style="width:100%;max-width:320px"></canvas></div>
+        <p class="hint warn" id="replaceHint"></p>
+        <p class="hint">精修方法：先在下方选好工具和颜色，再点图纸上的格子。手机上用 ＋/－ 放大后点格更准；图纸太大时可以拖动滚动查看。</p>
+        <hr class="divider">
+        <div class="tools" role="group" aria-label="编辑工具">
+          <button class="btn tool active" data-tool="paint" type="button">✏️ 改色<br><small>点格子填色</small></button>
+          <button class="btn tool" data-tool="erase" type="button">🧽 擦除<br><small>点格子清空</small></button>
+          <button class="btn tool" data-tool="pick" type="button">💧 取色<br><small>点格子选同色</small></button>
+          <button class="btn tool" data-tool="fill" type="button">🪣 整色替换<br><small>点哪格换哪种色</small></button>
+        </div>
+        <label class="flabel">当前颜色（点任意色块选中；整色替换时点目标色完成替换）</label>
+        <div class="pal-grid" id="palGrid"></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat"><div class="n" id="statTotal">0</div><div class="t">总颗数（不含空格）</div></div>
+        <div class="stat"><div class="n" id="statColors">0</div><div class="t">用到的颜色种数</div></div>
+        <div class="stat"><div class="n" id="statSize">—</div><div class="t">成品尺寸（按 5mm 豆估算）</div></div>
+        <div class="stat"><div class="n" id="statGrid">—</div><div class="t">图纸格数（宽 × 高）</div></div>
+      </div>
+
+      <div class="card full">
+        <h2>用色清单 · 每种颜色要多少颗</h2>
+        <div class="color-list" id="colorList"><p class="hint">生成图纸后，这里会按用量从多到少列出每个色号需要多少颗，照着清单备豆即可。每一行右侧的「整色替换」可以把这种颜色一次性全换成另一种。</p></div>
+      </div>
+
+      <div class="card full" style="margin-top:16px">
+        <h2>关于放进微信小程序</h2>
+        <p class="faq">这个网页版<strong>不能直接当成小程序页面嵌进去</strong>：小程序有自己的一套代码格式，网页要先在小程序后台配置业务域名，再用 <b>web-view</b> 组件加载，而且个人主体的小程序用不了 web-view。更稳妥的做法是把这套生成逻辑（采样、最近色匹配、统计）用小程序的 Canvas 2D 重写一遍，算法本身可以原样搬过去。要做小程序版时，拿这个网页版当效果基准就行。</p>
+      </div>
+    </div>
+  </div>
+  <footer>不同品牌、不同批次的拼豆实物会有色差，大作品开工前建议先拿实体色卡核对一遍关键颜色。</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ---------- 基础色库：48 个常用拼豆色（名称 + HEX） ---------- */
+var BASE = [
+ ["纯白","#FFFFFF"],["奶白","#FFF6E9"],["浅灰","#D9D9D9"],["中灰","#9AA0A3"],["深灰","#5B6063"],["炭黑","#26262B"],
+ ["大红","#D92323"],["深红","#9E1B1B"],["酒红","#7A2436"],["粉红","#F58BB1"],["浅粉","#FBD3DE"],["玫红","#E5447A"],
+ ["橙色","#F2762E"],["浅橙","#FFB066"],["肤色","#F6C89F"],["浅肤","#FBE0C3"],["棕色","#8A5A33"],["深棕","#5C3A21"],
+ ["咖啡","#A9805A"],["驼色","#D9B98A"],["黄色","#FFD51F"],["浅黄","#FFF3A0"],["金黄","#F5B921"],["柠檬绿","#B8D94A"],
+ ["草绿","#57B84B"],["深绿","#1F7A3D"],["墨绿","#14532D"],["薄荷绿","#9FE3C0"],["青色","#35B8B2"],["天蓝","#5FB4E8"],
+ ["宝蓝","#2563C9"],["深蓝","#1D3461"],["藏青","#232C4E"],["浅蓝","#BFE0F5"],["紫色","#7C4DBD"],["浅紫","#C9A9E8"],
+ ["薰衣草","#A78BDB"],["桃红","#FF7A93"],["珊瑚红","#FF6B57"],["杏色","#FFE3C2"],["米色","#EFE3CC"],["卡其","#B9A86B"],
+ ["橄榄绿","#7A8B3D"],["湖蓝","#2E86AB"],["灰蓝","#7D9DBD"],["巧克力","#4A2C1A"],["砖红","#B84A39"],["奶茶","#D8BFA8"]
+];
+function hexRgb(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function rgbLab(r,g,b){
+  function f(v){v/=255;return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4);}
+  r=f(r);g=f(g);b=f(b);
+  var x=(r*0.4124+g*0.3576+b*0.1805)/0.95047, y=(r*0.2126+g*0.7152+b*0.0722), z=(r*0.0193+g*0.1192+b*0.9505)/1.08883;
+  function t(v){return v>0.008856?Math.cbrt(v):7.787*v+16/116;}
+  x=t(x);y=t(y);z=t(z);
+  return [116*y-16,500*(x-y),200*(y-z)];
+}
+function labChroma(lab){ return Math.sqrt(lab[1]*lab[1]+lab[2]*lab[2]); }
+/* 有彩色保护阈值（Lab 色度 C*ab）：色度超过 10 视为有彩色。实测色板里纯白、
+   奶白、浅灰、中灰、深灰、炭黑的色度都在 8 以下，其余颜色都在 12 以上，
+   所以 10 正好把白/灰/黑这组中性色单独分出来。 */
+var CELL_CHROMA=10, PAL_CHROMA=10;
+function makePalette(prefix, count, shift){
+  var out=[];
+  for(var i=0;i<count;i++){
+    var base=BASE[i%BASE.length], rgb=hexRgb(base[1]);
+    if(shift){ rgb=rgb.map(function(v){return Math.max(0,Math.min(255,v+shift));}); }
+    var hex="#"+rgb.map(function(v){return v.toString(16).padStart(2,"0");}).join("").toUpperCase();
+    var lab=rgbLab(rgb[0],rgb[1],rgb[2]), chroma=labChroma(lab);
+    out.push({code:prefix+String(i+1).padStart(2,"0"), name:base[0], hex:hex, r:rgb[0], g:rgb[1], b:rgb[2], lab:lab, chroma:chroma, colorful:chroma>=PAL_CHROMA});
+  }
+  return out;
+}
+var PALETTES = {
+  mard:    makePalette("A", 48, 0),
+  coco:    makePalette("C", 44, 4),
+  manman:  makePalette("M", 42, -4),
+  panpan:  makePalette("P", 40, 8),
+  mixiaowo:makePalette("X", 38, -8)
+};
+var BRAND_NAMES={mard:"MARD",coco:"COCO",manman:"漫漫",panpan:"盼盼",mixiaowo:"咪小窝"};
+
+/* ---------- 状态 ---------- */
+var state={ img:null, srcCanvas:null, gridW:52, gridH:0, cells:[], palette:PALETTES.mard, brand:"mard",
+  tool:"paint", sel:0, zoom:14, history:[], pendingReplace:-1 };
+var $=function(id){return document.getElementById(id);};
+var board=$("board"), bctx=board.getContext("2d");
+function toast(msg){var t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove("show");},2200);}
+
+/* ---------- 色板选择区 ---------- */
+function renderPalette(){
+  var g=$("palGrid"); g.innerHTML="";
+  state.palette.forEach(function(c,i){
+    var d=document.createElement("div"); d.className="pal-cell"+(i===state.sel?" sel":"");
+    d.innerHTML='<div class="sw" style="background:'+c.hex+'"></div><div class="cd">'+c.code+'</div>';
+    d.title=c.code+" "+c.name+" "+c.hex;
+    d.addEventListener("click",function(){
+      if(state.pendingReplace>=0 && state.pendingReplace!==i){ applyReplace(state.pendingReplace,i); }
+      else { state.sel=i; renderPalette(); }
+    });
+    g.appendChild(d);
+  });
+}
+
+/* ---------- 生成图纸 ---------- */
+/* 饱和度增强：在 HSL 空间把 S 乘上 factor。灰、白、黑的 S 为 0，乘完还是 0，
+   所以中性色不会被染上颜色；淡蓝、淡粉这类低饱和彩色会被推离白/灰。 */
+function boostSaturation(data, factor){
+  if(!factor || Math.abs(factor-1)<0.001) return;
+  function hue2rgb(p,q,t){ if(t<0)t+=1; if(t>1)t-=1;
+    if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; }
+  for(var i=0;i<data.length;i+=4){
+    if(data[i+3]<110) continue;
+    var r=data[i]/255, g=data[i+1]/255, b=data[i+2]/255;
+    var mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+    if(d===0) continue;
+    var l=(mx+mn)/2;
+    var s= l>0.5 ? d/(2-mx-mn) : d/(mx+mn);
+    s=Math.max(0,Math.min(1,s*factor));
+    var h;
+    if(mx===r) h=((g-b)/d+(g<b?6:0))/6;
+    else if(mx===g) h=((b-r)/d+2)/6;
+    else h=((r-g)/d+4)/6;
+    var q= l<0.5 ? l*(1+s) : l+s-l*s, p=2*l-q;
+    data[i]=Math.round(hue2rgb(p,q,h+1/3)*255);
+    data[i+1]=Math.round(hue2rgb(p,q,h)*255);
+    data[i+2]=Math.round(hue2rgb(p,q,h-1/3)*255);
+  }
+}
+/* 最近色匹配 + 有彩色保护：refLab 是格子增强后的原始 Lab，用它的色度判断这个格子
+   本身是不是有彩色。有彩色的格子只在有彩色色号里找最近色，禁止落到白/灰/黑等
+   中性色上；本身就是灰白（色度低）的格子不受限制，仍可匹配到白/灰/黑。 */
+function nearestIdx(lab, pal, refLab){
+  var ref=refLab||lab;
+  var colorfulOnly=labChroma(ref)>CELL_CHROMA;
+  var best=-1,bd=1e18;
+  for(var i=0;i<pal.length;i++){
+    if(colorfulOnly && !pal[i].colorful) continue;
+    var p=pal[i].lab;var d=(lab[0]-p[0])*(lab[0]-p[0])+(lab[1]-p[1])*(lab[1]-p[1])+(lab[2]-p[2])*(lab[2]-p[2]);
+    if(d<bd){bd=d;best=i;}
+  }
+  if(best<0){ /* 色板里万一没有有彩色色号时兜底，避免返回无效下标 */
+    best=0;bd=1e18;
+    for(var j=0;j<pal.length;j++){var pp=pal[j].lab;var dd=(lab[0]-pp[0])*(lab[0]-pp[0])+(lab[1]-pp[1])*(lab[1]-pp[1])+(lab[2]-pp[2])*(lab[2]-pp[2]);if(dd<bd){bd=dd;best=j;}}
+  }
+  return best;
+}
+/* 自动去背景（在颜色匹配前执行）：先从四条边的格子里找出主导背景色——统计每个
+   边框格能代表多少个边框格（Lab 距离在容差一半内），取支持最多的那组求平均，
+   避免主体贴到边缘时把主体色误判成背景。再从边缘出发做四连通 flood fill，
+   只移除与边缘连通、且与背景参考色 Lab 距离在容差内的格子。主体内部被轮廓
+   包围的同色区域不与边缘连通，flood fill 到不了，不会被误删。
+   返回 Uint8Array 掩码：1 = 背景格（移除）。 */
+function computeBgMask(labs, W, H, tol){
+  var mask=new Uint8Array(W*H);
+  var border=[], x, y, i, j, k;
+  for(x=0;x<W;x++){ border.push(x); border.push((H-1)*W+x); }
+  for(y=1;y<H-1;y++){ border.push(y*W); border.push(y*W+W-1); }
+  var pts=[];
+  for(i=0;i<border.length;i++){ if(labs[border[i]]) pts.push(border[i]); }
+  if(!pts.length) return mask;
+  function labDist(a,b){ return Math.sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2])); }
+  var half=Math.max(4,tol*0.5), bestRef=null, bestSupport=-1;
+  for(i=0;i<pts.length;i++){
+    var sup=0;
+    for(j=0;j<pts.length;j++){ if(labDist(labs[pts[i]],labs[pts[j]])<=half) sup++; }
+    if(sup>bestSupport){ bestSupport=sup; bestRef=labs[pts[i]]; }
+  }
+  var ref=[0,0,0], cnt=0;
+  for(i=0;i<pts.length;i++){
+    if(labDist(labs[pts[i]],bestRef)<=half){ ref[0]+=labs[pts[i]][0]; ref[1]+=labs[pts[i]][1]; ref[2]+=labs[pts[i]][2]; cnt++; }
+  }
+  if(cnt){ ref=[ref[0]/cnt, ref[1]/cnt, ref[2]/cnt]; } else { ref=bestRef; }
+  function isBg(idx){ return !!labs[idx] && labDist(labs[idx],ref)<=tol; }
+  /* 邻格扩展：与背景参考色距离在容差内，或与当前格足够接近（处理渐变背景的
+     逐步过渡）但离参考色不能漂移超过 1.6 倍容差，防止顺着渐变漏进主体。 */
+  function canSpread(fromIdx, toIdx){
+    if(!labs[toIdx]) return false;
+    if(labDist(labs[toIdx],ref)<=tol) return true;
+    return labDist(labs[toIdx],labs[fromIdx])<=tol && labDist(labs[toIdx],ref)<=tol*1.6;
+  }
+  var queue=[], head=0;
+  for(i=0;i<border.length;i++){ k=border[i]; if(!mask[k] && isBg(k)){ mask[k]=1; queue.push(k); } }
+  var dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  while(head<queue.length){
+    k=queue[head++]; var cx=k%W, cy=(k-cx)/W;
+    for(i=0;i<4;i++){ var nx=cx+dirs[i][0], ny=cy+dirs[i][1];
+      if(nx<0||ny<0||nx>=W||ny>=H) continue;
+      var nk=ny*W+nx;
+      if(!mask[nk] && canSpread(k,nk)){ mask[nk]=1; queue.push(nk); } }
+  }
+  return mask;
+}
+function generate(){
+  if(!state.srcCanvas){ toast("先上传一张照片，或点示例图"); return; }
+  var W=state.gridW, src=state.srcCanvas;
+  var H=Math.max(8,Math.round(W*src.height/src.width));
+  state.gridH=H;
+  var off=document.createElement("canvas"); off.width=W; off.height=H;
+  var octx=off.getContext("2d",{willReadFrequently:true});
+  octx.imageSmoothingEnabled=true; octx.drawImage(src,0,0,W,H);
+  var imgData=octx.getImageData(0,0,W,H);
+  var satEl=$("satRange"), satFactor=satEl?parseFloat(satEl.value):1.3;
+  if(isNaN(satFactor)) satFactor=1.3;
+  boostSaturation(imgData.data, satFactor); /* 先增强饱和度，再做颜色匹配 */
+  var data=imgData.data;
+  var pal=state.palette, cells=new Array(W*H), labs=[];
+  for(var i=0;i<W*H;i++){
+    if(data[i*4+3]<110){ labs.push(null); }
+    else { labs.push(rgbLab(data[i*4],data[i*4+1],data[i*4+2])); }
+  }
+  /* 自动去背景：在颜色匹配前先算背景掩码，背景格直接置空（-1），之后不参与
+     匹配、颗数统计和 PNG / CSV 导出（统计与导出本来就跳过 -1 格）。 */
+  var bgMask=null, bgRemoved=0;
+  if($("bgChk") && $("bgChk").checked){
+    var bgTol=parseFloat($("bgTolRange").value); if(isNaN(bgTol)) bgTol=20;
+    bgMask=computeBgMask(labs,W,H,bgTol);
+    for(var bi=0;bi<W*H;bi++) if(bgMask[bi]) bgRemoved++;
+  }
+  for(var ci=0;ci<W*H;ci++){
+    if(!labs[ci] || (bgMask && bgMask[ci])) cells[ci]=-1;
+    else cells[ci]=nearestIdx(labs[ci],pal);
+  }
+  if($("ditherChk").checked){ /* Floyd–Steinberg 抖动：把量化误差扩散给邻格 */
+    var err=new Float32Array(W*H*3);
+    for(var y=0;y<H;y++)for(var x=0;x<W;x++){var k=y*W+x; if(cells[k]<0||!labs[k])continue;
+      var adj=[labs[k][0]+err[k*3],labs[k][1]+err[k*3+1],labs[k][2]+err[k*3+2]];
+      var ni=nearestIdx(adj,pal,labs[k]); cells[k]=ni;
+      var e=[adj[0]-pal[ni].lab[0],adj[1]-pal[ni].lab[1],adj[2]-pal[ni].lab[2]];
+      var nb=[[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]];
+      for(var j=0;j<4;j++){var nx=x+nb[j][0],ny=y+nb[j][1]; if(nx>=0&&nx<W&&ny<H){var nk=ny*W+nx;for(var c=0;c<3;c++)err[nk*3+c]+=e[c]*nb[j][2];}}
+    }
+  }
+  state.cells=cells; state.history=[];
+  fitZoom(); render(); updateStats();
+  toast("图纸已生成："+W+" × "+H+" 格"+(bgRemoved?("，已去除背景 "+bgRemoved+" 格"):""));
+}
+function pushHistory(){ state.history.push(state.cells.slice()); if(state.history.length>40)state.history.shift(); }
+
+/* ---------- 渲染图纸 ---------- */
+function render(){
+  var W=state.gridW,H=state.gridH,z=state.zoom;
+  if(!H||!state.cells.length){ return; }
+  var padL=z>=10?26:16, padT=z>=10?22:14;
+  board.width=W*z+padL+4; board.height=H*z+padT+4;
+  board.style.maxWidth="none"; board.style.width=board.width+"px"; board.style.height=board.height+"px";
+  bctx.fillStyle=getComputedStyle(document.body).getPropertyValue("--card")||"#fff"; bctx.fillRect(0,0,board.width,board.height);
+  var showCode=$("showCodeChk").checked && z>=13;
+  bctx.font="700 "+Math.max(8,z*0.36)+"px sans-serif"; bctx.textAlign="center"; bctx.textBaseline="middle";
+  for(var y=0;y<H;y++)for(var x=0;x<W;x++){
+    var idx=state.cells[y*W+x], px=padL+x*z, py=padT+y*z;
+    if(idx>=0){ var c=state.palette[idx]; bctx.fillStyle=c.hex; bctx.fillRect(px,py,z,z);
+      if(showCode){ var lum=0.299*c.r+0.587*c.g+0.114*c.b; bctx.fillStyle=lum>150?"rgba(0,0,0,.62)":"rgba(255,255,255,.85)"; bctx.fillText(c.code,px+z/2,py+z/2+0.5); }
+    } else { bctx.fillStyle="rgba(127,127,127,.08)"; bctx.fillRect(px,py,z,z); }
+  }
+  /* 网格：每格细线 + 每 5 格粗线 */
+  for(var gx=0;gx<=W;gx++){ bctx.strokeStyle=gx%5===0?"rgba(90,90,90,.55)":"rgba(120,120,120,.22)"; bctx.lineWidth=gx%5===0?1.2:0.6;
+    bctx.beginPath(); bctx.moveTo(padL+gx*z,padT); bctx.lineTo(padL+gx*z,padT+H*z); bctx.stroke(); }
+  for(var gy=0;gy<=H;gy++){ bctx.strokeStyle=gy%5===0?"rgba(90,90,90,.55)":"rgba(120,120,120,.22)"; bctx.lineWidth=gy%5===0?1.2:0.6;
+    bctx.beginPath(); bctx.moveTo(padL,padT+gy*z); bctx.lineTo(padL+W*z,padT+gy*z); bctx.stroke(); }
+  /* 坐标：每 5 格标注 */
+  bctx.fillStyle="#888"; bctx.font="700 10px sans-serif";
+  for(var cx=0;cx<W;cx+=5){ bctx.fillText(String(cx+1),padL+cx*z+z/2,padT-8); }
+  for(var cy=0;cy<H;cy+=5){ bctx.fillText(String(cy+1),padL-10,padT+cy*z+z/2); }
+  board._padL=padL; board._padT=padT;
+  $("zoomLabel").textContent=Math.round(z/14*100)+"%";
+}
+function fitZoom(){
+  var box=$("scrollBox"), avail=Math.max(280,box.clientWidth-30);
+  state.zoom=Math.max(6,Math.min(26,Math.floor(avail/Math.max(1,state.gridW))));
+}
+
+/* ---------- 统计 ---------- */
+function counts(){ var m=new Map(); state.cells.forEach(function(v){ if(v>=0)m.set(v,(m.get(v)||0)+1); }); return m; }
+function updateStats(){
+  var m=counts(), total=0; m.forEach(function(v){total+=v;});
+  $("statTotal").textContent=total.toLocaleString();
+  $("statColors").textContent=m.size;
+  $("statGrid").textContent=state.gridW+" × "+state.gridH;
+  $("statSize").textContent=state.gridH?(state.gridW*0.5).toFixed(1)+" × "+(state.gridH*0.5).toFixed(1)+" cm":"—";
+  $("sizeMeta").innerHTML=state.gridH?("图纸 <b>"+state.gridW+" × "+state.gridH+"</b> 格 · 品牌 <b>"+BRAND_NAMES[state.brand]+"</b>（"+state.palette.length+" 色）· 成品约 <b>"+(state.gridW*0.5).toFixed(1)+" × "+(state.gridH*0.5).toFixed(1)+" cm</b> · 共需 <b>"+total+"</b> 颗豆"):"还没有图纸。上传照片或点示例图即可生成。";
+  var list=$("colorList"); list.innerHTML="";
+  if(!m.size){ list.innerHTML='<p class="hint">生成图纸后，这里会按用量从多到少列出每个色号需要多少颗。</p>'; return; }
+  var arr=Array.from(m.entries()).sort(function(a,b){return b[1]-a[1];});
+  arr.forEach(function(pair){
+    var c=state.palette[pair[0]], n=pair[1];
+    var row=document.createElement("div"); row.className="color-row";
+    row.innerHTML='<div class="sw" style="background:'+c.hex+'"></div><div class="info"><b>'+c.code+' · '+c.name+'</b> <span style="color:var(--accent);font-weight:900">'+n+' 颗</span><small>'+c.hex+' · '+(total?n/total*100:0).toFixed(1)+'%</small><div class="bar"><i style="width:'+(total?n/total*100:0)+'%"></i></div></div>';
+    var b=document.createElement("button"); b.className="btn small"; b.type="button"; b.textContent="整色替换";
+    b.addEventListener("click",function(){ startReplace(pair[0]); });
+    row.appendChild(b); list.appendChild(row);
+  });
+}
+
+/* ---------- 编辑 ---------- */
+function startReplace(srcIdx){
+  state.pendingReplace=srcIdx;
+  var c=state.palette[srcIdx], h=$("replaceHint");
+  h.style.display="block"; h.textContent="正在替换 "+c.code+"（"+c.name+"）：去上方色板点一个目标颜色，就会把图纸里所有 "+c.code+" 一次性换掉。点同一颜色取消。";
+  toast("已选中 "+c.code+"，再点目标颜色完成替换");
+}
+function applyReplace(srcIdx,dstIdx){
+  pushHistory(); var n=0;
+  state.cells=state.cells.map(function(v){ if(v===srcIdx){n++;return dstIdx;} return v; });
+  state.pendingReplace=-1; $("replaceHint").style.display="none"; state.sel=dstIdx;
+  renderPalette(); render(); updateStats(); toast("已把 "+n+" 格换成 "+state.palette[dstIdx].code);
+}
+board.addEventListener("pointerdown",function(e){
+  if(!state.cells.length)return;
+  var r=board.getBoundingClientRect();
+  var x=Math.floor((e.clientX-r.left-(board._padL||0))/state.zoom), y=Math.floor((e.clientY-r.top-(board._padT||0))/state.zoom);
+  if(x<0||y<0||x>=state.gridW||y>=state.gridH)return;
+  var k=y*state.gridW+x, cur=state.cells[k];
+  if(state.tool==="pick"){ if(cur>=0){state.sel=cur;renderPalette();toast("已取色 "+state.palette[cur].code);} return; }
+  if(state.tool==="fill"){ if(cur>=0&&cur!==state.sel) applyReplace(cur,state.sel); return; }
+  pushHistory();
+  state.cells[k]= state.tool==="erase" ? -1 : state.sel;
+  render(); updateStats();
+});
+document.querySelectorAll(".tool").forEach(function(b){ b.addEventListener("click",function(){
+  document.querySelectorAll(".tool").forEach(function(x){x.classList.remove("active");});
+  b.classList.add("active"); state.tool=b.getAttribute("data-tool");
+});});
+$("undoBtn").addEventListener("click",function(){ var p=state.history.pop(); if(p){state.cells=p;render();updateStats();toast("已撤销");} else toast("没有可撤销的操作"); });
+$("showCodeChk").addEventListener("change",render);
+
+/* 合并相近颜色 */
+$("mergeRange").addEventListener("input",function(){ $("mergeOut").textContent=this.value; });
+$("mergeBtn").addEventListener("click",function(){
+  if(!state.cells.length)return;
+  var th=parseFloat($("mergeRange").value), m=counts();
+  var used=Array.from(m.keys()).sort(function(a,b){return m.get(b)-m.get(a);});
+  var mapTo={}, kept=[];
+  used.forEach(function(idx){
+    var target=-1;
+    for(var i=0;i<kept.length;i++){
+      if(!!state.palette[idx].colorful !== !!state.palette[kept[i]].colorful) continue; /* 有彩色保护：彩色不并入白/灰/黑，中性色也不并入彩色 */
+      var a=state.palette[idx].lab,b=state.palette[kept[i]].lab;
+      var d=Math.sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2]));
+      if(d<th){target=kept[i];break;} }
+    if(target<0){kept.push(idx);mapTo[idx]=idx;} else mapTo[idx]=target;
+  });
+  if(kept.length===used.length){ toast("当前强度下没有可合并的颜色，试着调大强度"); return; }
+  pushHistory();
+  state.cells=state.cells.map(function(v){return v<0?-1:mapTo[v];});
+  render(); updateStats(); toast("已合并：颜色从 "+used.length+" 种减少到 "+kept.length+" 种");
+});
+/* 去杂色：孤立单格改成周围最多的颜色 */
+$("denoiseBtn").addEventListener("click",function(){
+  if(!state.cells.length)return;
+  var W=state.gridW,H=state.gridH,old=state.cells.slice(),changed=0,next=state.cells.slice();
+  for(var y=0;y<H;y++)for(var x=0;x<W;x++){ var k=y*W+x,v=old[k]; if(v<0)continue;
+    var nb=[],dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    for(var i=0;i<4;i++){var nx=x+dirs[i][0],ny=y+dirs[i][1]; if(nx>=0&&nx<W&&ny>=0&&ny<H&&old[ny*W+nx]>=0)nb.push(old[ny*W+nx]);}
+    if(nb.length&&nb.indexOf(v)<0){ var cnt={}; nb.forEach(function(n){cnt[n]=(cnt[n]||0)+1;});
+      var best=nb[0]; for(var key in cnt) if(cnt[key]>cnt[best])best=+key;
+      next[k]=best; changed++; }
+  }
+  if(!changed){ toast("没有发现孤立杂色格"); return; }
+  pushHistory(); state.cells=next; render(); updateStats(); toast("已清理 "+changed+" 个孤立杂色格");
+});
+
+/* ---------- 缩放 ---------- */
+$("zoomIn").addEventListener("click",function(){ state.zoom=Math.min(40,state.zoom+3); render(); });
+$("zoomOut").addEventListener("click",function(){ state.zoom=Math.max(5,state.zoom-3); render(); });
+$("zoomFit").addEventListener("click",function(){ fitZoom(); render(); });
+
+/* ---------- 上传与示例 ---------- */
+function loadSource(canvasOrImg, isDemo){
+  state.srcCanvas=canvasOrImg;
+  var t=$("thumb");
+  t.src=canvasOrImg.toDataURL ? canvasOrImg.toDataURL("image/png") : canvasOrImg.src;
+  t.style.display="block"; $("dropTitle").textContent=isDemo?"示例图已载入，可以点「生成图纸」试试":"照片已载入，可以点「生成图纸」了";
+  generate();
+}
+function handleFile(f){
+  if(!f)return;
+  var url=URL.createObjectURL(f), img=new Image();
+  img.onload=function(){ var c=document.createElement("canvas"); var max=900, s=Math.min(1,max/Math.max(img.width,img.height));
+    c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); loadSource(c,false); };
+  img.src=url;
+}
+var drop=$("drop"), fi=$("fileInput");
+drop.addEventListener("click",function(){fi.click();});
+drop.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();fi.click();}});
+fi.addEventListener("change",function(){handleFile(fi.files[0]);});
+["dragover","dragenter"].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add("over");});});
+["dragleave","drop"].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove("over");});});
+drop.addEventListener("drop",function(e){ var f=e.dataTransfer.files&&e.dataTransfer.files[0]; handleFile(f); });
+$("demoBtn").addEventListener("click",function(){
+  var c=document.createElement("canvas"); c.width=480; c.height=360; var x=c.getContext("2d");
+  var g=x.createLinearGradient(0,0,0,360); g.addColorStop(0,"#8fd0f2"); g.addColorStop(0.62,"#eaf7ff"); g.addColorStop(0.62,"#57b84b"); g.addColorStop(1,"#2e7d32");
+  x.fillStyle=g; x.fillRect(0,0,480,360);
+  x.fillStyle="#ffd51f"; x.beginPath(); x.arc(408,58,30,0,7); x.fill();
+  x.fillStyle="#ffffff"; [[90,60],[170,44],[300,76]].forEach(function(p){x.beginPath();x.ellipse(p[0],p[1],42,15,0,0,7);x.ellipse(p[0]+26,p[1]+4,30,12,0,0,7);x.fill();});
+  x.fillStyle="#b84a39"; x.fillRect(70,190,150,90); x.fillStyle="#7a2436"; x.beginPath(); x.moveTo(52,192); x.lineTo(145,128); x.lineTo(238,192); x.closePath(); x.fill();
+  x.fillStyle="#5c3a21"; x.fillRect(128,232,34,48); x.fillStyle="#bfe0f5"; x.fillRect(178,214,24,24);
+  x.fillStyle="#1f7a3d"; x.beginPath(); x.arc(330,205,52,0,7); x.fill(); x.fillStyle="#5c3a21"; x.fillRect(323,240,13,52);
+  x.fillStyle="#e5447a"; [40,120,250,290,440].forEach(function(fx,i){ x.beginPath(); x.arc(fx,318+(i%2)*16,8,0,7); x.fill(); });
+  x.fillStyle="#f2762e"; x.beginPath(); x.arc(258,300,7,0,7); x.fill();
+  loadSource(c,true);
+});
+
+/* ---------- 设置联动 ---------- */
+function syncGrid(v){ v=Math.max(16,Math.min(120,Math.round(v)||52)); state.gridW=v; $("gridW").value=v; $("gridWNum").value=v; $("gridWOut").textContent=v; }
+$("satRange").addEventListener("input",function(){ $("satOut").textContent=parseFloat(this.value).toFixed(2)+"×"; });
+$("bgChk").addEventListener("change",function(){ $("bgTolBox").style.display=this.checked?"block":"none"; });
+$("bgTolRange").addEventListener("input",function(){ $("bgTolOut").textContent=this.value; });
+$("gridW").addEventListener("input",function(){ syncGrid(+this.value); });
+$("gridWNum").addEventListener("change",function(){ syncGrid(parseInt(this.value,10)); });
+$("brandSel").addEventListener("change",function(){ state.brand=this.value; state.palette=PALETTES[this.value]; state.sel=0; state.pendingReplace=-1; $("replaceHint").style.display="none"; renderPalette(); if(state.cells.length) generate(); });
+$("genBtn").addEventListener("click",generate);
+
+/* ---------- 导出 PNG ---------- */
+$("pngBtn").addEventListener("click",function(){
+  if(!state.cells.length){toast("先生成一张图纸");return;}
+  var W=state.gridW,H=state.gridH,m=counts(),total=0; m.forEach(function(v){total+=v;});
+  var cs=34, padL=56, padT=86, legendCols=state.gridW>=60?3:2, legendRows=Math.ceil(m.size/legendCols), legendH=legendRows*30+58;
+  var cv=document.createElement("canvas"); cv.width=padL+W*cs+24; cv.height=padT+H*cs+legendH+20;
+  var x=cv.getContext("2d");
+  x.fillStyle="#ffffff"; x.fillRect(0,0,cv.width,cv.height);
+  x.fillStyle="#1e2321"; x.font="900 26px sans-serif"; x.textAlign="left";
+  x.fillText("拼豆图纸 · "+BRAND_NAMES[state.brand]+" 色板",padL,38);
+  x.font="15px sans-serif"; x.fillStyle="#555";
+  x.fillText(W+" × "+H+" 格 · "+m.size+" 种颜色 · 共 "+total+" 颗 · 成品约 "+(W*0.5).toFixed(1)+" × "+(H*0.5).toFixed(1)+" cm（5mm 豆）",padL,64);
+  x.textAlign="center"; x.textBaseline="middle"; x.font="700 "+(cs*0.32)+"px sans-serif";
+  for(var gy=0;gy<H;gy++)for(var gx=0;gx<W;gx++){ var idx=state.cells[gy*W+gx], px=padL+gx*cs, py=padT+gy*cs;
+    if(idx>=0){ var c=state.palette[idx]; x.fillStyle=c.hex; x.fillRect(px,py,cs,cs);
+      var lum=0.299*c.r+0.587*c.g+0.114*c.b; x.fillStyle=lum>150?"rgba(0,0,0,.65)":"rgba(255,255,255,.9)"; x.fillText(c.code,px+cs/2,py+cs/2); }
+  }
+  for(var i=0;i<=W;i++){ x.strokeStyle=i%5===0?"rgba(60,60,60,.7)":"rgba(120,120,120,.3)"; x.lineWidth=i%5===0?1.4:0.7; x.beginPath(); x.moveTo(padL+i*cs,padT); x.lineTo(padL+i*cs,padT+H*cs); x.stroke(); }
+  for(var j=0;j<=H;j++){ x.strokeStyle=j%5===0?"rgba(60,60,60,.7)":"rgba(120,120,120,.3)"; x.lineWidth=j%5===0?1.4:0.7; x.beginPath(); x.moveTo(padL,padT+j*cs); x.lineTo(padL+W*cs,padT+j*cs); x.stroke(); }
+  x.fillStyle="#777"; x.font="700 13px sans-serif";
+  for(var cx=0;cx<W;cx+=5) x.fillText(String(cx+1),padL+cx*cs+cs/2,padT-14);
+  for(var cy=0;cy<H;cy+=5) x.fillText(String(cy+1),padL-18,padT+cy*cs+cs/2);
+  var ly=padT+H*cs+26;
+  x.textAlign="left"; x.fillStyle="#1e2321"; x.font="900 19px sans-serif"; x.fillText("用色清单（备豆数量）",padL,ly); ly+=16;
+  var arr=Array.from(m.entries()).sort(function(a,b){return b[1]-a[1];});
+  var colW=(W*cs)/legendCols;
+  x.font="14px sans-serif";
+  arr.forEach(function(pair,k){ var c=state.palette[pair[0]]; var colX=padL+(k%legendCols)*colW, rowY=ly+Math.floor(k/legendCols)*30+12;
+    x.fillStyle=c.hex; x.fillRect(colX,rowY-10,20,20); x.strokeStyle="#bbb"; x.strokeRect(colX,rowY-10,20,20);
+    x.fillStyle="#222"; x.fillText(c.code+" "+c.name+" × "+pair[1]+" 颗",colX+28,rowY+1); });
+  var a=document.createElement("a"); a.download="拼豆图纸_"+BRAND_NAMES[state.brand]+"_"+W+"x"+H+".png"; a.href=cv.toDataURL("image/png"); a.click();
+  toast("PNG 图纸已导出");
+});
+/* ---------- 导出 CSV ---------- */
+$("csvBtn").addEventListener("click",function(){
+  if(!state.cells.length){toast("先生成一张图纸");return;}
+  var W=state.gridW,H=state.gridH,lines=["行,列,色号,颜色名,十六进制"];
+  for(var y=0;y<H;y++)for(var x2=0;x2<W;x2++){ var idx=state.cells[y*W+x2];
+    if(idx>=0){var c=state.palette[idx]; lines.push((y+1)+","+(x2+1)+","+c.code+","+c.name+","+c.hex);} else lines.push((y+1)+","+(x2+1)+",,,"); }
+  lines.push(""); lines.push("色号,颜色名,十六进制,颗数");
+  var m=counts(); Array.from(m.entries()).sort(function(a,b){return b[1]-a[1];}).forEach(function(p){var c=state.palette[p[0]]; lines.push(c.code+","+c.name+","+c.hex+","+p[1]);});
+  var blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  var a=document.createElement("a"); a.download="拼豆图纸数据_"+W+"x"+H+".csv"; a.href=URL.createObjectURL(blob); a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+  toast("CSV 已导出");
+});
+
+renderPalette();
+window.addEventListener("resize",function(){ if(state.cells.length){ fitZoom(); render(); } });
+</script>
+</body>
+</html>
