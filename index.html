@@ -282,6 +282,10 @@ footer{margin-top:52px;font-size:13px;color:var(--muted);text-align:center}
           <button class="btn small" id="denoiseBtn" type="button">去除孤立杂色</button>
           <button class="btn small" id="undoBtn" type="button">撤销一步</button>
         </div>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="btn small" id="mirrorHBtn" type="button">水平镜像</button>
+          <button class="btn small" id="mirrorVBtn" type="button">垂直镜像</button>
+        </div>
       </div>
     </div>
 
@@ -872,6 +876,21 @@ $("denoiseBtn").addEventListener("click",function(){
   }
   if(!changed){ toast("没有发现孤立杂色格"); return; }
   pushHistory(); state.cells=next; render(); updateStats(); toast("已清理 "+changed+" 个孤立杂色格");
+});
+
+/* 镜像：左右翻转（每行格子逆序），可撤销 */
+$("mirrorHBtn").addEventListener("click",function(){
+  if(!state.cells.length)return;
+  var W=state.gridW,H=state.gridH,next=state.cells.slice();
+  for(var y=0;y<H;y++){ var l=y*W,r=l+W-1; while(l<r){ var t=next[l]; next[l]=next[r]; next[r]=t; l++; r--; } }
+  pushHistory(); state.cells=next; render(); toast("已水平镜像");
+});
+/* 镜像：上下翻转（行顺序逆序），可撤销 */
+$("mirrorVBtn").addEventListener("click",function(){
+  if(!state.cells.length)return;
+  var W=state.gridW,H=state.gridH,next=state.cells.slice();
+  for(var y=0;y<Math.floor(H/2);y++){ var a=y*W,b=(H-1-y)*W; for(var x=0;x<W;x++){ var t=next[a+x]; next[a+x]=next[b+x]; next[b+x]=t; } }
+  pushHistory(); state.cells=next; render(); toast("已垂直镜像");
 });
 
 /* ---------- 缩放 ---------- */
